@@ -62,6 +62,57 @@ st.title("🎬 Promo Finder")
 st.caption("Reads a microdrama screenplay and finds 20-60s promo clips that open on a hook, cut on a cliffhanger "
            "and make sense to a stranger. The AI picks script lines by id; timestamps always come from the script.")
 
+
+ARCH_SVG = r"""<svg viewBox="0 0 700 395" width="100%">
+ <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#666"/></marker></defs>
+ <g font-size="11">
+ <rect x="10" y="10" width="150" height="44" rx="6" fill="#fff" stroke="#999"/><text x="85" y="28" text-anchor="middle" font-weight="700">INPUT</text><text x="85" y="44" text-anchor="middle">50 episode scripts (.txt / .zip)</text>
+ <line x1="160" y1="32" x2="196" y2="32" stroke="#666" marker-end="url(#a)"/>
+ <rect x="200" y="10" width="150" height="44" rx="6" fill="#ececef" stroke="#aaa"/><text x="275" y="28" text-anchor="middle" font-weight="700">① PARSE</text><text x="275" y="44" text-anchor="middle">number every line + its time</text>
+ <line x1="350" y1="32" x2="386" y2="32" stroke="#666" marker-end="url(#a)"/>
+ <rect x="390" y="10" width="160" height="44" rx="6" fill="#ececef" stroke="#aaa"/><text x="470" y="28" text-anchor="middle" font-weight="700">② PRE-FILTER (rules)</text><text x="470" y="44" text-anchor="middle">highlight ~3 hot spots / episode</text>
+ <line x1="470" y1="54" x2="470" y2="86" stroke="#666" marker-end="url(#a)"/>
+ <rect x="390" y="90" width="160" height="48" rx="6" fill="#dde8ff" stroke="#7d9be0"/><text x="470" y="108" text-anchor="middle" font-weight="700">③ PROPOSE (Gemini call 1)</text><text x="470" y="125" text-anchor="middle">picks promos by line number</text>
+ <line x1="390" y1="114" x2="356" y2="114" stroke="#666" marker-end="url(#a)"/>
+ <rect x="200" y="90" width="150" height="48" rx="6" fill="#dde8ff" stroke="#7d9be0"/><text x="275" y="108" text-anchor="middle" font-weight="700">④ STITCH (Gemini call 2)</text><text x="275" y="125" text-anchor="middle">joins moments across eps</text>
+ <line x1="275" y1="138" x2="275" y2="170" stroke="#666" marker-end="url(#a)"/>
+ <rect x="170" y="174" width="210" height="56" rx="6" fill="#ececef" stroke="#aaa"/><text x="275" y="192" text-anchor="middle" font-weight="700">⑤ VALIDATE (Python rules)</text><text x="275" y="208" text-anchor="middle">real times · 20–60 s · hook first</text><text x="275" y="222" text-anchor="middle">fix or drop bad picks</text>
+ <line x1="380" y1="202" x2="416" y2="202" stroke="#666" marker-end="url(#a)"/>
+ <rect x="420" y="174" width="170" height="56" rx="6" fill="#dde8ff" stroke="#7d9be0"/><text x="505" y="192" text-anchor="middle" font-weight="700">⑥ COLD VIEWER (call 3)</text><text x="505" y="208" text-anchor="middle">fresh AI, knows nothing,</text><text x="505" y="222" text-anchor="middle">judges each clip</text>
+ <line x1="505" y1="230" x2="505" y2="262" stroke="#666" marker-end="url(#a)"/>
+ <rect x="420" y="266" width="170" height="48" rx="6" fill="#ececef" stroke="#aaa"/><text x="505" y="284" text-anchor="middle" font-weight="700">⑦ RANK + PLAN (Python)</text><text x="505" y="300" text-anchor="middle">score formula · 7-day plan</text>
+ <line x1="420" y1="290" x2="386" y2="290" stroke="#666" marker-end="url(#a)"/>
+ <rect x="200" y="266" width="180" height="48" rx="6" fill="#dff3df" stroke="#7fbf7f"/><text x="290" y="284" text-anchor="middle" font-weight="700">⑧ WEBSITE + EDITOR</text><text x="290" y="300" text-anchor="middle">approve / reject + reason</text>
+ <path d="M200,290 C120,290 110,150 190,125" fill="none" stroke="#2b7a2b" stroke-dasharray="4 3" marker-end="url(#a)"/>
+ <text x="70" y="215" fill="#2b7a2b" font-size="10">editor's reasons are</text><text x="70" y="228" fill="#2b7a2b" font-size="10">added to the next</text><text x="70" y="241" fill="#2b7a2b" font-size="10">run's Gemini prompt</text>
+ <rect x="10" y="335" width="680" height="50" rx="6" fill="#fff8ec" stroke="#e0b060"/>
+ <text x="20" y="354" font-weight="700">Safety net around every Gemini call:</text>
+ <text x="20" y="368">saved answers (no paying twice) · backup models if one is busy or out of quota · max 60 s wait</text><text x="20" y="381">time budget · if the AI fails → the rule-based picks are used instead (clearly labelled)</text>
+ </g>
+</svg>"""
+
+
+def show_architecture():
+    import streamlit.components.v1 as components
+    with st.expander("🧭 How it works: architecture", expanded=False):
+        components.html(
+            '<div style="background:#fff;border-radius:8px;padding:10px;font-family:sans-serif">'
+            + ARCH_SVG +
+            '<div style="font-size:12px;margin-top:6px">'
+            '<b style="background:#ececef;padding:1px 5px">GREY</b> Python code &nbsp; '
+            '<b style="background:#dde8ff;padding:1px 5px">BLUE</b> Gemini (AI) &nbsp; '
+            '<b style="background:#dff3df;padding:1px 5px">GREEN</b> human editor</div></div>',
+            height=560, scrolling=False)
+        st.markdown(
+            "- **AI judges, code enforces.** Gemini decides what is dramatic; Python handles exact times, the 20-60 s rule, ranking.\n"
+            "- **Gemini never writes timestamps.** It names script line IDs (e.g. E03-047); code looks up the real times.\n"
+            "- **A separate 'cold viewer' AI** sees only the clip (no title, no plot) and says if a stranger would stop and tap.\n"
+            "- **Ranking:** 28% stop-scroll + 28% need-next + 16% clarity + 10% rule tension + 18% early episode, minus penalties.\n"
+            "- **Safety net:** saved answers, backup models, max 60 s wait, time budget; if AI fails, rule-based picks are used.")
+
+
+show_architecture()
+
 # ------------------------------------------------------------------ sidebar
 with st.sidebar:
     st.header("Model")
