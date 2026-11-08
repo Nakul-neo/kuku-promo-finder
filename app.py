@@ -57,8 +57,9 @@ def svg_chart(xs, ys, kind="line", height=180, color="#ff4b4b", x_label="", y_la
 REJECT_REASONS = ["weak hook (first 3s)", "no real cliffhanger", "needs context / confusing",
                   "too spoilery", "bad cut point", "duplicate of another promo", "visual-only moment (script oversells)", "other"]
 
-st.set_page_config(page_title="Promo Finder", page_icon="🎬", layout="wide")
-st.title("🎬 Promo Finder")
+st.set_page_config(page_title="Montage: promo finder", page_icon="🎬", layout="wide")
+st.title("🎬 Montage")
+st.markdown("**Finds the scroll-stopping moments in every episode.**")
 st.caption("Reads a microdrama screenplay and finds 20-60s promo clips that open on a hook, cut on a cliffhanger "
            "and make sense to a stranger. The AI picks script lines by id; timestamps always come from the script.")
 

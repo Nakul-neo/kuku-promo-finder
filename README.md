@@ -1,4 +1,6 @@
-# Promo Finder: microdrama screenplay → ranked 20–60 s promos
+# Montage: microdrama screenplay → ranked 20–60 s promos
+
+*Finds the scroll-stopping moments in every episode.*
 
 Reads a timestamped microdrama screenplay (one `.txt` per episode) and returns promo clips that
 **open on a hook within 3 s**, **cut on a cliffhanger** and **make sense to a stranger**, each with
