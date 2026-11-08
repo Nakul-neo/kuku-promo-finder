@@ -26,6 +26,34 @@ try:
 except Exception:  # noqa: BLE001  (no secrets file locally)
     pass
 FEEDBACK = Path("feedback/feedback.jsonl")
+
+def svg_chart(xs, ys, kind="line", height=180, color="#ff4b4b", x_label="", y_label=""):
+    """Dependency-free chart (inline SVG). Streamlit's built-in charts need Altair,
+    which fails on some Python versions on Streamlit Cloud, so we draw our own."""
+    if not ys:
+        st.caption("(no data)")
+        return
+    w, h, pad = 760, height, 28
+    ymax = max(max(ys), 1e-9)
+    xmin, xmax = min(xs), max(xs)
+    xr = (xmax - xmin) or 1
+    sx = lambda x: pad + (x - xmin) / xr * (w - 2 * pad)
+    sy = lambda y: h - pad - y / ymax * (h - 2 * pad)
+    parts = [f'<svg viewBox="0 0 {w} {h}" width="100%" xmlns="http://www.w3.org/2000/svg" '
+             f'style="background:transparent;font:11px sans-serif;fill:#999">',
+             f'<line x1="{pad}" y1="{h-pad}" x2="{w-pad}" y2="{h-pad}" stroke="#888" stroke-width="1"/>']
+    if kind == "line":
+        pts = " ".join(f"{sx(x):.1f},{sy(y):.1f}" for x, y in zip(xs, ys))
+        parts.append(f'<polyline points="{pts}" fill="none" stroke="{color}" stroke-width="2"/>')
+    else:
+        bw = max((w - 2 * pad) / max(len(xs), 1) * 0.7, 2)
+        for x, y in zip(xs, ys):
+            parts.append(f'<rect x="{sx(x) - bw / 2:.1f}" y="{sy(y):.1f}" width="{bw:.1f}" '
+                         f'height="{h - pad - sy(y):.1f}" fill="{color}"/>')
+    parts.append(f'<text x="{pad}" y="{h - 8}">{xmin:g}</text><text x="{w - pad}" y="{h - 8}" '
+                 f'text-anchor="end">{xmax:g} {x_label}</text><text x="{pad}" y="14">max {ymax:g} {y_label}</text></svg>')
+    st.markdown("".join(parts), unsafe_allow_html=True)
+
 REJECT_REASONS = ["weak hook (first 3s)", "no real cliffhanger", "needs context / confusing",
                   "too spoilery", "bad cut point", "duplicate of another promo", "visual-only moment (script oversells)", "other"]
 
@@ -215,8 +243,8 @@ with t_map:
     if eps:
         en = st.selectbox("Episode", [e.number for e in eps])
         ep = next(e for e in eps if e.number == en)
-        curve = pd.DataFrame(tension_curve(ep), columns=["second", "tension"]).set_index("second")
-        st.line_chart(curve)
+        tc = tension_curve(ep)
+        svg_chart([t for t, _ in tc], [v for _, v in tc], "line", x_label="s", y_label="tension")
         hits = [p for p in promos if en in p["episodes"]]
         st.caption(f"Logline: {ep.logline}")
         for p in hits:
@@ -235,7 +263,8 @@ with t_quality:
     q2.metric("Cold viewer would tap", f"{(df['would_tap'] == True).mean():.0%}" if len(df) else "–")  # noqa: E712
     q3.metric("Median length", f"{df['duration'].median():.0f}s" if len(df) else "–")
     st.markdown("**Promos per episode** (are we over-picking some episodes?)")
-    st.bar_chart(df.groupby("episode").size())
+    per_ep = df.groupby("episode").size() if len(df) else pd.Series(dtype=int)
+    svg_chart(list(per_ep.index), list(per_ep.values), "bar", height=140, x_label="episode", y_label="promos")
     st.markdown("**Dropped by the validator**")
     st.dataframe(pd.DataFrame(res.get("dropped", [])), use_container_width=True)
     st.markdown("**All promos**")
