@@ -1,0 +1,8 @@
+# Kuku's screenplays are confidential: never commit them
+data/
+*.zip
+.env
+.cache/
+.streamlit/secrets.toml
+__pycache__/
+feedback/feedback.jsonl
